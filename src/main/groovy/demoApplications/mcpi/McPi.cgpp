@@ -1,0 +1,57 @@
+package demoApplications.mcpi
+
+import groovyParallelPatterns.DataDetails
+import groovyParallelPatterns.ResultDetails
+import groovyParallelPatterns.cluster.connectors.NodeRequestingSeqCastList
+import groovyParallelPatterns.cluster.connectors.OneNodeRequestedList
+import groovyParallelPatterns.connectors.reducers.ListFanOne
+import groovyParallelPatterns.connectors.reducers.ListMergeOne
+import groovyParallelPatterns.functionals.groups.ListGroupList
+import groovyParallelPatterns.terminals.Collect
+import groovyParallelPatterns.terminals.Emit
+
+// number of workers on each node
+int cores = 4
+// number of clusters
+int clusters = 1 //worker nodes
+//@emit
+
+def emitDetails = new DataDetails(
+    dName: MCpiData.getName(),
+    dInitMethod: MCpiData.init,
+    dInitData: [1024],
+    dCreateMethod: MCpiData.create,
+    dCreateData: [100000]
+)
+
+def emit = new Emit (
+    eDetails: emitDetails
+)
+
+def onrl = new OneNodeRequestedList()
+
+//@cluster clusters
+
+def nrfl = new NodeRequestingSeqCastList()
+
+def group = new ListGroupList(
+    workers: cores,
+    function: SerializedMCpiData.withinOp
+)
+
+def afo1 = new ListFanOne()
+
+//@collect
+
+def resultDetails = new ResultDetails(
+    rName: MCpiResultsSerialised.getName(),
+    rInitMethod: MCpiResultsSerialised.init,
+    rCollectMethod: MCpiResultsSerialised.collector,
+    rFinaliseMethod: MCpiResultsSerialised.finalise
+)
+
+def afo2 = new ListMergeOne()
+
+def collector = new Collect(
+    rDetails: resultDetails
+)

@@ -1,0 +1,62 @@
+package demoApplications.mandelbrot
+
+import groovyParallelPatterns.DataDetails
+import groovyParallelPatterns.ResultDetails
+import groovyParallelPatterns.cluster.connectors.NodeRequestingFanAny
+import groovyParallelPatterns.cluster.connectors.OneNodeRequestedList
+import groovyParallelPatterns.connectors.reducers.AnyFanOne
+import groovyParallelPatterns.functionals.groups.AnyGroupAny
+import groovyParallelPatterns.terminals.Collect
+import groovyParallelPatterns.terminals.Emit
+
+import demoApplications.mandelbrot.MandelbrotLine as ml
+import demoApplications.mandelbrot.MandelbrotLineCollect as mlc
+import demoApplications.mandelbrot.SerializedMandelbrotLine as sml
+
+// number of workers on each node
+int cores = 4
+// number of clusters
+int clusters = 1
+
+//@emit
+//application variables
+int width = 350
+int height = 200
+int maxIterations = 100
+double pixelDelta = 0.01
+
+def emitDetails = new DataDetails(dName: ml.getName(),
+    dInitMethod: ml.init,
+    dInitData: [width, height, pixelDelta, maxIterations],
+    dCreateMethod: ml.create
+)
+def emit = new Emit (
+    eDetails: emitDetails
+)
+def onrl = new OneNodeRequestedList()
+
+//@cluster clusters
+def nrfa = new NodeRequestingFanAny(
+    destinations: cores
+)
+def group = new AnyGroupAny(
+    workers: cores,
+    function: sml.calcColour
+)
+def afo1 = new AnyFanOne(
+    sources: cores
+)
+
+//@collect
+def resultDetails = new ResultDetails(rName: mlc.getName(),
+    rInitMethod: mlc.init,
+    rCollectMethod: mlc.collector,
+    rFinaliseMethod: mlc.finalise )
+
+def afo2 = new AnyFanOne(
+    sources: clusters
+)
+def collector = new Collect(
+    rDetails: resultDetails
+)
+
